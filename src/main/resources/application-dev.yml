@@ -1,0 +1,16 @@
+spring:
+  jpa:
+    show-sql: true              # See all SQL in dev
+    properties:
+      hibernate:
+        format_sql: true
+
+  flyway:
+    clean-on-validation-error: true   # Dev only — wipes and recreates on schema mismatch
+
+logging:
+  level:
+    com.familyfinance: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql: TRACE
