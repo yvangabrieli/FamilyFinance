@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 @Repository
@@ -18,10 +19,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
 
     Page<Transaction> findByFamilyId(UUID familyId, Pageable pageable);
 
-    Page<Transaction> findByFamilyIdAndUserId(UUID familyId, UUID userId, Pageable pageable);
-
-    Page<Transaction> findByFamilyIdAndType(UUID familyId, TransactionType type, Pageable pageable);
-
+    // Filtered list for the main transactions screen
     @Query("""
         SELECT t FROM Transaction t
         WHERE t.family.id = :familyId
@@ -42,7 +40,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
             Pageable pageable
     );
 
-    // Sum of expenses for a category in a date range (for budget tracking)
+    // Sum of expenses for a category in a date range (budget tracking)
     @Query("""
         SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t
         WHERE t.family.id = :familyId
@@ -54,6 +52,48 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
     BigDecimal sumExpensesByCategoryAndPeriod(
             @Param("familyId") UUID familyId,
             @Param("categoryId") UUID categoryId,
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to
+    );
+
+    // Total income for a family in a date range
+    @Query("""
+        SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t
+        WHERE t.family.id = :familyId
+          AND t.type = 'INCOME'
+          AND t.date >= :from AND t.date <= :to
+        """)
+    BigDecimal sumIncomeByPeriod(
+            @Param("familyId") UUID familyId,
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to
+    );
+
+    // Total expenses for a family in a date range
+    @Query("""
+        SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t
+        WHERE t.family.id = :familyId
+          AND t.type = 'EXPENSE'
+          AND t.date >= :from AND t.date <= :to
+        """)
+    BigDecimal sumExpensesByPeriod(
+            @Param("familyId") UUID familyId,
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to
+    );
+
+    // Spending grouped by category (for top-categories insight)
+    @Query("""
+        SELECT t.category.name, t.category.icon, SUM(t.amount)
+        FROM Transaction t
+        WHERE t.family.id = :familyId
+          AND t.type = 'EXPENSE'
+          AND t.date >= :from AND t.date <= :to
+        GROUP BY t.category.name, t.category.icon
+        ORDER BY SUM(t.amount) DESC
+        """)
+    List<Object[]> sumExpensesGroupedByCategory(
+            @Param("familyId") UUID familyId,
             @Param("from") LocalDate from,
             @Param("to") LocalDate to
     );
